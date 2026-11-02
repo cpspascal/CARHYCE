@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CARHYCE – Saisie terrain</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌊%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--tx:#1b2a23;--mu:#64726a;--ac:#1d6b52;--ac2:#e1f0e8;--bd:#d6ddd7;--on:#fff;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111916;--card:#1a2420;--tx:#e6efe9;--mu:#93a39a;--ac:#4fc29b;--ac2:#1e3329;--bd:#2c3a33;--on:#08140f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111916;--card:#1a2420;--tx:#e6efe9;--mu:#93a39a;--ac:#4fc29b;--ac2:#1e3329;--bd:#2c3a33;--on:#08140f;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:84px}
+main{max-width:560px;margin:0 auto;padding:14px}
+h1{font-size:1.25rem;margin:4px 0 12px}h2{font-size:.9rem;margin:16px 0 8px;color:var(--mu);text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+label{display:block;font-size:.85rem;color:var(--mu);margin-bottom:10px}
+input,select,textarea{display:block;width:100%;margin-top:4px;padding:11px;font:inherit;font-size:16px;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+button{font:inherit;padding:12px 14px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+button.p{background:var(--ac);color:var(--on);border-color:var(--ac);font-weight:600}button.w{width:100%}button.d{color:#c0392b}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px}
+.chip{padding:10px 0;font-weight:600}.chip.done{background:var(--ac2);border-color:var(--ac)}.chip.on{background:var(--ac);color:var(--on)}
+.calc{background:var(--ac2);border-radius:10px;padding:10px;font-size:.9rem}
+.st{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left}.st small{color:var(--mu)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav{overflow-x:auto}nav button{flex:1 0 auto;border:0;border-radius:0;background:none;padding:12px 9px;font-size:.72rem;color:var(--mu)}nav button.on{color:var(--ac);font-weight:700}
+textarea{font:12px/1.3 ui-monospace,monospace;min-height:150px}
+.tg{padding:6px 9px;font-size:.8rem;border-radius:16px;margin:2px}.tg.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
+.tgs{display:flex;flex-wrap:wrap;margin-bottom:4px}
+.pt{display:grid;grid-template-columns:34px 1fr 1fr;gap:6px;align-items:center;margin-bottom:10px;padding-bottom:6px;border-bottom:1px dashed var(--bd)}
+.pt input,.pt select{margin:0;padding:8px}.pt select{grid-column:1/-1}.pt input[readonly]{background:var(--ac2)}.pt .tgs{grid-column:1/-1;margin:0}
+.sr{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;margin-top:8px}.sr select{margin:0}
+.wn{color:#b45309}.mu{color:var(--mu);font-size:.85rem}
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:9px 14px;border-radius:20px;font-size:.85rem;display:none}
+</style></head><body>
+<main id="app"></main><nav id="nav"></nav><div id="toast"></div>
+<script>
+const KEY="carhyce:v2";
+const SUBO=[["",""],["D","D · Dalles >1024"],["R","R · Rochers >1024"],["B","B · Blocs 256–1024"],["PG","PG · Pierres grossières 128–256"],["PF","PF · Pierres fines 64–128"],["CG","CG · Cailloux grossiers 32–64"],["CF","CF · Cailloux fins 16–32"],["GG","GG · Graviers grossiers 8–16"],["GF","GF · Graviers fins 2–8"],["S","S · Sables <2"],["L","L · Limons"],["A","A · Argiles"],["V","V · Vase"],["TV","TV · Terre végétale"]];
+const ADD=["CR","VS","DL","VA","PD","CC"];
+const FAC=["","Chenal lentique","Fosse de dissipation","Mouille de concavité","Fosse d’affouillement","Chenal lotique","Plat lentique","Plat courant","Radier","Rapide","Cascade","Chute"];
+const FS=["Mouille","Plat lentique","Plat courant","Radier rapide"];
+const FA={"Mouille":["Chenal lentique","Fosse de dissipation","Mouille de concavité","Fosse d’affouillement","Chenal lotique"],"Plat lentique":["Plat lentique"],"Plat courant":["Plat courant"],"Radier rapide":["Radier","Rapide","Cascade","Chute"]};
+const NR=["","Non renseigné"];
+const facS=f=>FS.find(k=>FA[k].includes(f))||"";
+const fsOf=t=>t.fs??facS(t.fac);
+const facOpts=fs=>[NR,...(FA[fs]||[]).map(x=>[x,x])];
+const MAT=[["",""],["MN","MN · Matériaux naturels"],["AV","AV · Aménagement végétalisé"],["ER","ER · Enrochement"],["MA","MA · Matériaux artificiels"]];
+const HAB=[["SB","SB sous-berge"],["CR","CR chevelu racinaire"],["VS","VS végét. surplombante"],["BR","BR blocs rocheux"],["DL","DL débris ligneux"]];
+const CONT=["","Absence","Isolée","Espacée-régulière","Bosquets épars","Semi-continue","Continue"];
+const EP=["","< 5 m","5 à 10 m","10 à 25 m","> 25 m"],STR=["Arborée","Arbustive","Herbacée"],TYP=["Naturelle","Exotique","Plantée"];
+let S={stations:[],cur:null,view:"home",ti:0};
+const $=s=>document.querySelector(s);
+const esc=x=>String(x??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num=v=>{const x=parseFloat(String(v??"").replace(",","."));return isNaN(x)?null:x};
+const f2=x=>x==null?"–":x.toFixed(2).replace(".",",");
+const avg=a=>{const v=a.map(num).filter(x=>x!=null);return v.length?v.reduce((x,y)=>x+y,0)/v.length:null};
+const cs=()=>S.stations.find(s=>s.id===S.cur);
+const gv=k=>k.split(".").reduce((o,p)=>o==null?o:o[p],cs());
+function setv(k,v){const p=k.split(".");let o=cs();for(let i=0;i<p.length-1;i++){if(o[p[i]]==null)o[p[i]]={};o=o[p[i]]}o[p[p.length-1]]=v}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const d=JSON.parse(r);S.stations=d.stations||[];S.cur=d.cur||null}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({stations:S.stations,cur:S.cur}))}catch(e){}}
+function toast(m){const t=$("#toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",2200)}
+const newT=()=>({pts:Array.from({length:15},()=>({}))});
+function newStation(){const s={id:Date.now().toString(36),code:"",ops:"",date:new Date().toISOString().slice(0,10),meteo:"",xam:"",yam:"",xav:"",yav:"",le:["","",""],me:["","",""],deb:"",cg:"",cd:"",hm:[],rem:"",wol:[],t:Array.from({length:15},newT),
+tr:[["T1","Point 1"],["Point 1","Point 2"],["Point 2","Point 3"],["Point 3","Point 4"],["Point 4","Point T15"]].map(x=>({a:x[0],b:x[1]})),
+col:{A:{b:[{},{},{},{}]},B:{b:[{},{},{},{}]}}};S.stations.unshift(s);S.cur=s.id;S.view="station";save();render()}
+const done=t=>!!(t&&t.lpb&&t.lm);
+const calc=s=>{const l=avg(s.le),m=avg(s.me);return{l,m,L:l&&14*l,d:m&&m/7}};
+const dh=r=>num(r.avm)!=null&&num(r.amm)!=null?num(r.avm)-num(r.amm):null;
+function penteCalc(s){let D=0,H=null;s.tr.forEach(r=>{D+=num(r.d)||0;const h=dh(r);if(h!=null)H=(H||0)+h});return{D,H,p:D>0&&H!=null?1000*H/D:null}}
+const opt=(o,v)=>o.map(x=>{const a=Array.isArray(x)?x:[x,x];return`<option value="${esc(a[0])}"${a[0]===v?" selected":""}>${esc(a[1]||"—")}</option>`}).join("");
+const inp=(k,ph)=>`<input data-k="${k}" value="${esc(gv(k)??"")}" inputmode="decimal" placeholder="${ph||""}" autocomplete="off">`;
+const sel=(k,o)=>`<select data-k="${k}">${opt(o,gv(k)??"")}</select>`;
+const tgl=(k,v,l)=>`<button class="tg${(gv(k)||[]).includes(v)?" on":""}" data-a="tg" data-k="${k}" data-v="${esc(v)}">${esc(l||v)}</button>`;
+const fld=(l,k,t,o)=>`<label>${l}${o?sel(k,o):t==="area"?`<textarea data-k="${k}">${esc(gv(k)??"")}</textarea>`:`<input data-k="${k}" value="${esc(gv(k)??"")}" ${t==="n"?'inputmode="decimal"':t==="d"?'type="date"':""} autocomplete="off">`}</label>`;
+function hv(){return`<h1>🌊 CARHYCE – Saisie terrain</h1><button class="p w" data-a="new">+ Nouvelle station</button><h2>Relevés enregistrés</h2>`+(S.stations.length?S.stations.map(s=>`<div class="card"><button class="st" data-a="open" data-i="${s.id}"><span><b>${esc(s.code||"Sans nom")}</b><br><small>${esc(s.date)} · ${s.t.filter(done).length}/${s.t.length} transects</small></span><span>›</span></button></div>`).join(""):`<p class="mu">Aucun relevé. Les données restent sur cet appareil (navigateur).</p>`)}
+function sv(s){return`<h1>Station</h1><div class="card">${fld("Code / nom de la station","code")}<div class="row">${fld("Date","date","d")}${fld("Opérateurs","ops")}</div>${fld("Météo","meteo")}
+<div class="row">${fld("Amont X","xam","n")}${fld("Amont Y","yam","n")}</div><div class="row">${fld("Aval X","xav","n")}${fld("Aval Y","yav","n")}</div>
+<div class="row"><button data-a="gps" data-i="am">📍 GPS → amont</button><button data-a="gps" data-i="av">📍 GPS → aval</button></div><p class="mu">Le bouton GPS renseigne X = longitude, Y = latitude (WGS84).</p>${tgl("ph","ok","📷 Photos prises (3 amont + 3 aval)")}</div>
+<h2>Largeurs préliminaires (3 transects)</h2><div class="card"><div class="row3">${[0,1,2].map(i=>fld("lpb-ev"+(i+1)+" (m)","le."+i,"n")).join("")}</div><div class="row3">${[0,1,2].map(i=>fld("lm-ev"+(i+1)+" (m)","me."+i,"n")).join("")}</div><div class="calc" id="calc"></div></div>
+<h2>Données représentatives</h2><div class="card">${fld("Débit D (m³/s)","deb","n")}<div class="row">${fld("Continuité ripisylve RG","cg","",CONT)}${fld("Continuité ripisylve RD","cd","",CONT)}</div>
+<span class="mu">Habitats marginaux (hors transects)</span><div class="tgs">${ADD.map(a=>tgl("hm",a)).join("")}</div></div>
+<h2>Granulométrie du radier (Wolman)</h2><div class="card"><p class="mu" style="margin-top:0">100 éléments (50 si radier très petit) : plus grande largeur perpendiculaire au grand axe, en mm. Sable : 0,5 par défaut.</p><div class="row"><input id="wi" inputmode="decimal" placeholder="mm" style="margin:0"><button class="p" data-a="wadd">Ajouter</button></div><div class="calc" id="wol" style="margin-top:8px"></div><div class="row" style="margin-top:8px"><button data-a="wundo">↩ Annuler le dernier</button><button class="d" data-a="wclr">Vider</button></div></div>
+<h2>Remarques</h2><div class="card">${fld("Observations","rem","area")}</div>`}
+const bank=(i,sd)=>{const b=`t.${i}.${sd}`;return`<div class="card"><b>Berge ${sd==="rg"?"gauche":"droite"}</b><div class="tgs">${tgl(b+".str","Absence")}${STR.map(x=>tgl(b+".str",x)).join("")}</div>`+STR.map(x=>`<div class="sr"><span class="mu">${x} · épaisseur</span>${sel(b+".ep."+x,EP)}</div><div class="tgs">${TYP.map(y=>tgl(b+".ty."+x,y)).join("")}</div>`).join("")+`<div style="height:8px"></div>${fld("Strate la plus recouvrante",b+".rc","",["","Arborée","Arbustive"])}${fld("Matériaux de la berge",b+".mat","",MAT)}<span class="mu">Habitats caractéristiques</span><div class="tgs">${HAB.map(h=>tgl(b+".hab",h[0],h[1])).join("")}</div></div>`};
+function recalcPts(i){const t=cs().t[i],hh=num(t.hpb);t.pts.forEach((p,j)=>{const l=num(p.lm);p.p=(l!=null&&hh!=null)?String(+(l-hh*100).toFixed(1)).replace(".",","):"";const e=document.getElementById(`pp${i}_${j}`);if(e)e.value=p.p})}
+const pts=i=>Array.from({length:15},(_,j)=>`<div class="pt"><b>P${j+1}</b>${inp(`t.${i}.pts.${j}.lm`,"Lecture mire (cm)")}<input id="pp${i}_${j}" value="${esc(gv(`t.${i}.pts.${j}.p`)??"")}" placeholder="prof. (cm)" readonly>${sel(`t.${i}.pts.${j}.s`,SUBO)}<div class="tgs">${ADD.map(a=>tgl(`t.${i}.pts.${j}.a`,a)).join("")}</div></div>`).join("");
+function tv(s){const i=S.ti,c=calc(s),b=`t.${i}`,t=s.t[i];if(t.fs==null&&t.fac)t.fs=facS(t.fac);return`<h1>Transects</h1><div class="grid">${s.t.map((t,j)=>`<button class="chip${done(t)?" done":""}${j===i?" on":""}" data-a="t" data-i="${j}">${j+1}</button>`).join("")}</div>${s.t.length<18?`<button class="w" data-a="addt" style="margin-bottom:10px">+ Transect reporté (T${s.t.length+1})</button>`:""}
+<div class="card"><b>Transect ${i+1}</b> <span class="mu">· abscisse ${c.l?(i*c.l).toFixed(1).replace(".",",")+" m":"–"} depuis T1</span><div style="height:10px"></div>${fld("Début côté",b+".deb","",["","Rive gauche","Rive droite"])}
+<div class="row3">${fld("lpb (m)",b+".lpb","n")}${fld("lm (m)",b+".lm","n")}${fld("hpb (m)",b+".hpb","n")}</div>${fld("Faciès simplifié",b+".fs","",[NR,...FS.map(x=>[x,x])])}<div id="fa">${fld("Faciès affiné",b+".fac","",facOpts(t.fs))}</div><div style="height:8px"></div>${fld("Remarque (décalage, report, estimation…)",b+".rem")}<div class="calc" id="tst"></div></div>
+<h2>Points de mesure P1–P15</h2><div class="card"><p class="mu" style="margin-top:0">Depuis la rive la plus basse. Lecture mire en cm. Profondeur (cm) = lecture mire − hpb (converti en cm), calculée automatiquement ; négative hors d’eau. Pas inter-points : ${c.d?f2(c.d)+" m":"–"}.</p><p class="mu">Additionnel : CR chevelu racinaire · VS végétation surplombante · DL débris ligneux, embâcle · VA végétation aquatique · PD pool détritique · CC concrétion calcaire.</p>${pts(i)}</div>${bank(i,"rg")}${bank(i,"rd")}
+<div class="row"><button data-a="prev"${i===0?" disabled":""}>← Précédent</button><button class="p" data-a="next"${i===s.t.length-1?" disabled":""}>Suivant →</button></div>`}
+function pv(s){return`<h1>Pente de la ligne d’eau</h1><p class="mu">Entre T1 (tête de radier) et T15, avec au moins 4 visées intermédiaires. Fh, Fm, Fb : fils stadimétriques haut, médian, bas. Le calcul définitif se fait au bureau par régression.</p>`+s.tr.map((r,i)=>{const k=`tr.${i}`;return`<div class="card"><b>Tronçon ${i+1}</b><div class="row">${fld("Limite aval",k+".a")}${fld("Limite amont",k+".b")}</div>${fld("Distance (m)",k+".d","n")}<span class="mu">Visée limite aval (lecture aval)</span><div class="row3">${["h","m","b"].map(x=>fld("F"+x,k+".av"+x,"n")).join("")}</div><span class="mu">Visée limite amont (lecture amont)</span><div class="row3">${["h","m","b"].map(x=>fld("F"+x,k+".am"+x,"n")).join("")}</div><div class="calc" id="dh${i}"></div></div>`}).join("")+`<button class="w" data-a="addtr">+ Tronçon</button><div class="calc" id="pst" style="margin-top:10px"></div>`}
+function cv(s){return`<h1>Colmatage · bâtonnets</h1><div class="card"><div class="row">${fld("Date de pose","col.dp","d")}${fld("Relève prévue","col.dr","d")}</div>${fld("Date effective de relève","col.de","d")}<p class="mu" style="margin:0">Profondeur d’oxygénation : distance entre le haut du bâtonnet et la première tache significative (0 à 30 cm). Sans tache significative : 30 cm. Lecture immédiate sur le terrain.</p></div>`+["A","B"].map(r=>{const k=`col.${r}`;return`<h2>Radier ${r}</h2><div class="card">${fld("Coordonnées GPS du radier",k+".gps")}${fld("Indices pour retrouver le radier",k+".idx","area")}${fld("Nombre de bâtonnets posés",k+".nb","n")}`+[0,1,2,3].map(j=>`<b>B${j+1}-${r}</b><div class="row" style="margin-bottom:8px">${sel(`${k}.b.${j}.e`,["","Bon","Mauvais","Disparu"])}${inp(`${k}.b.${j}.p`,"prof. cm")}</div>`).join("")+`<div class="calc" id="cst${r}"></div></div>`}).join("")}
+const q=v=>{v=String(v??"");if(/^-?\d+\.\d+$/.test(v))v=v.replace(".",",");return/[;"\n]/.test(v)?`"${v.replace(/"/g,'""')}"`:v};
+const fx=x=>x==null?"":+x.toFixed(3);
+function csv(s){const c=calc(s),P=penteCalc(s),o=[],R=a=>a.map(q).join(";"),J=a=>(a||[]).join("|"),C=s.code;
+o.push("# STATION",R(["code","date","operateurs","meteo","x_amont","y_amont","x_aval","y_aval","lpb_ev_m","lm_ev_m","L_m","d_inter_points_m","debit_m3s","pente_permil","cont_ripisylve_RG","cont_ripisylve_RD","habitats_marginaux"]),R([C,s.date,s.ops,s.meteo,s.xam,s.yam,s.xav,s.yav,fx(c.l),fx(c.m),fx(c.L),fx(c.d),s.deb,fx(P.p),s.cg,s.cd,J(s.hm)]));
+o.push("","# TRANSECTS_POINTS",R(["code","transect","abscisse_m","debut_rive","lpb_m","lm_m","hpb_m","facies","facies_simplifie","remarque","point","lecture_mire_cm","prof_cm","substrat","additionnel"]));
+s.t.forEach((t,i)=>t.pts.forEach((p,j)=>{if(p.p||p.lm||p.s||(p.a||[]).length||j===0)o.push(R([C,i+1,c.l?fx(i*c.l):"",t.deb,t.lpb,t.lm,t.hpb,t.fac,fsOf(t),t.rem,j+1,p.lm,p.p,p.s,J(p.a)]))}));
+o.push("","# BERGES",R(["code","transect","rive","strates",...STR.map(x=>"epaisseur_"+x),...STR.map(x=>"types_"+x),"recouvrante","materiau","habitats"]));
+s.t.forEach((t,i)=>["rg","rd"].forEach(d=>{const b=t[d]||{};o.push(R([C,i+1,d.toUpperCase(),J(b.str),...STR.map(x=>(b.ep||{})[x]),...STR.map(x=>J((b.ty||{})[x])),b.rc,b.mat,J(b.hab)]))}));
+o.push("","# PENTE",R(["code","troncon","limite_aval","limite_amont","distance_m","aval_Fh","aval_Fm","aval_Fb","amont_Fh","amont_Fm","amont_Fb","dh_m"]));
+s.tr.forEach((r,i)=>o.push(R([C,i+1,r.a,r.b,r.d,r.avh,r.avm,r.avb,r.amh,r.amm,r.amb,fx(dh(r))])));
+o.push("","# COLMATAGE",R(["code","radier","gps","indices","nb_poses","date_pose","date_releve","baton","etat","prof_oxygenation_cm"]));
+["A","B"].forEach(r=>{const x=s.col[r]||{};(x.b||[]).forEach((b,j)=>o.push(R([C,r,x.gps,x.idx,x.nb,s.col.dp,s.col.de,"B"+(j+1)+"-"+r,b.e,b.p])))});
+o.push("","# WOLMAN",R(["code","element","mm"]));s.wol.forEach((w,i)=>o.push(R([C,i+1,w])));return o.join("\n")}
+function ev(s){return`<h1>Export</h1><div class="card"><b>${esc(s.code||"Sans nom")}</b><br><span class="mu">${s.t.filter(done).length}/${s.t.length} transects complets (15 requis, 13 minimum)</span></div><textarea id="csv" readonly>${esc(csv(s))}</textarea><div class="row" style="margin-top:10px"><button class="p" data-a="copy">Copier CSV</button><button data-a="copyj">Copier JSON</button></div><button class="w" data-a="share" style="margin-top:8px">Partager</button><div style="height:16px"></div><button class="d w" data-a="del">Supprimer cette station</button>`}
+function nav(){const s=cs(),n=$("#nav");if(!s||S.view==="home"){n.style.display="none";return}n.style.display="flex";n.innerHTML=[["home","📂 Relevés"],["station","📍 Station"],["transects","📏 Transects"],["pente","⛰ Pente"],["colmatage","🪵 Colmatage"],["export","📤 Export"]].map(x=>`<button data-a="view" data-i="${x[0]}" class="${S.view===x[0]?"on":""}">${x[1]}</button>`).join("")}
+function updW(s){const e=$("#wol");if(!e)return;const w=s.wol,a=[...w].sort((x,y)=>x-y),n=a.length,m=n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):null;e.innerHTML=`<b>${n}</b>/100 éléments`+(n?` · D50 ≈ <b>${f2(m)} mm</b> · min ${f2(a[0])} · max ${f2(a[n-1])}<br><span class="mu">Derniers : ${w.slice(-12).map(x=>String(x).replace(".",",")).join(" · ")}</span>`:"")}
+function upd(){const s=cs();if(!s)return;const v=S.view,H=(id,h)=>{const e=$(id);if(e)e.innerHTML=h};
+if(v==="station"){const c=calc(s),P=penteCalc(s);H("#calc",c.l?`lpb-ev moyenne : <b>${f2(c.l)} m</b><br>Longueur de station L = 14 × lpb-ev : <b>${f2(c.L)} m</b><br>Distance inter-transects : <b>${f2(c.l)} m</b><br>Distance inter-points (lm-ev ÷ 7) : <b>${c.d?f2(c.d)+" m":"–"}</b><br>Pente J estimée : <b>${P.p==null?"–":f2(P.p)+" ‰"}</b>`:"Saisissez les largeurs préliminaires.");updW(s)}
+else if(v==="transects"){const t=s.t[S.ti],w=t.pts.map(p=>num(p.p)).filter(x=>x!=null&&x>0),m=w.length?w.reduce((a,b)=>a+b,0)/w.length:null,h=num(t.hpb);let x=`Points en eau : <b>${w.length}</b>`;if(m!=null)x+=` · profondeur moy. en eau : <b>${f2(m)} cm</b>`;if(m!=null&&h!=null)x+=`<br>Profondeur à plein bords ≈ <b>${f2(h+m/100)} m</b>`;if(num(t.lm)!=null&&num(t.lpb)!=null&&num(t.lm)>num(t.lpb))x+=`<br><span class="wn">⚠ lm ne doit pas dépasser lpb</span>`;H("#tst",x)}
+else if(v==="pente"){s.tr.forEach((r,i)=>{const h=dh(r),ck=["av","am"].some(p=>{const a=num(r[p+"h"]),m=num(r[p+"m"]),b=num(r[p+"b"]);return a!=null&&m!=null&&b!=null&&Math.abs((a+b)/2-m)>0.005});H("#dh"+i,(h==null?"Δh : –":`Δh = Fm aval − Fm amont : <b>${h.toFixed(3).replace(".",",")} m</b>`)+(ck?`<br><span class="wn">⚠ Fm devrait être égal à (Fh+Fb)/2</span>`:""))});const P=penteCalc(s);H("#pst",`Distance totale D : <b>${f2(P.D)} m</b><br>ΔH : <b>${P.H==null?"–":P.H.toFixed(3).replace(".",",")+" m"}</b><br>Pente P = 1000 × ΔH ÷ D : <b>${P.p==null?"–":f2(P.p)+" ‰"}</b>`)}
+else if(v==="colmatage"){["A","B"].forEach(r=>{const m=avg(s.col[r].b.map(b=>b.p));H("#cst"+r,`Profondeur d’oxygénation moyenne : <b>${m==null?"–":f2(m)+" cm"}</b>`)})}}
+function render(){const s=cs();let h;if(S.view==="home"||!s){S.view="home";h=hv()}else h={station:sv,transects:tv,pente:pv,colmatage:cv,export:ev}[S.view](s);$("#app").innerHTML=h;nav();upd();window.scrollTo(0,0)}
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.k;if(!k)return;setv(k,e.target.value);{const m=k.match(/^t\.(\d+)\.(hpb|pts\.\d+\.lm)$/);if(m)recalcPts(+m[1])}if(k.endsWith(".fs")){const i=k.split(".")[1],t=cs().t[i];t.fac="";const f=$("#fa");if(f)f.innerHTML=fld("Faciès affiné",`t.${i}.fac`,"",facOpts(t.fs))}save();upd();if(k.startsWith("t.")){const i=+k.split(".")[1],b=document.querySelectorAll(".chip")[i];if(b)b.classList.toggle("done",done(cs().t[i]))}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="wi"){e.preventDefault();document.querySelector('[data-a="wadd"]').click()}});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a,i=b.dataset.i,s=cs();
+if(a==="new")newStation();
+else if(a==="open"){S.cur=i;S.view="station";save();render()}
+else if(a==="view"){S.view=i;render()}
+else if(a==="t"){S.ti=+i;render()}
+else if(a==="prev"){S.ti=Math.max(0,S.ti-1);render()}
+else if(a==="next"){S.ti=Math.min(s.t.length-1,S.ti+1);render()}
+else if(a==="addt"){s.t.push(newT());S.ti=s.t.length-1;save();render()}
+else if(a==="addtr"){s.tr.push({a:"",b:""});save();render()}
+else if(a==="tg"){const k=b.dataset.k,v=b.dataset.v,arr=gv(k)||[],n=arr.indexOf(v);n<0?arr.push(v):arr.splice(n,1);setv(k,arr);save();b.classList.toggle("on")}
+else if(a==="gps"){if(!navigator.geolocation)return toast("GPS indisponible");navigator.geolocation.getCurrentPosition(p=>{s["x"+i]=p.coords.longitude.toFixed(6);s["y"+i]=p.coords.latitude.toFixed(6);save();render()},()=>toast("Position non autorisée"),{enableHighAccuracy:true,timeout:15000})}
+else if(a==="wadd"){const w=$("#wi"),x=num(w.value);if(x==null)return;s.wol.push(x);w.value="";w.focus();save();updW(s)}
+else if(a==="wundo"){s.wol.pop();save();updW(s)}
+else if(a==="wclr"){if(confirm("Vider les mesures Wolman ?")){s.wol=[];save();updW(s)}}
+else if(a==="copy"||a==="copyj"){const t=$("#csv");if(a==="copyj")t.value=JSON.stringify(s,null,1);t.select();try{navigator.clipboard.writeText(t.value).then(()=>toast("Copié"),()=>{document.execCommand("copy");toast("Copié")})}catch(x){document.execCommand("copy");toast("Copié")}}
+else if(a==="share"){const t=csv(s);if(navigator.share)navigator.share({title:"CARHYCE "+(s.code||""),text:t}).catch(()=>{});else toast("Partage indisponible : utilisez Copier")}
+else if(a==="del"){if(confirm("Supprimer définitivement cette station ?")){S.stations=S.stations.filter(x=>x.id!==s.id);S.cur=null;S.view="home";save();render()}}});
+load();render();
+</script></body></html>
